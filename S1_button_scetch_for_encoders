@@ -51,7 +51,7 @@ void go(float LEpowerInPercents, float REpowerInPercents)
   while (leftEncoderValue/4 < rightEncoderValue/4)
   {
      REpowerInPercents = REpowerInPercents - 10;                //<--- Не уменьшается мощность двигателя.
-          Serial.println (LEpowerInPercents);
+          Serial.println (REpowerInPercents);                  // по показаниям "уходит" в минус.
   }
   while (rightEncoderValue/4 < leftEncoderValue/4)
   {
