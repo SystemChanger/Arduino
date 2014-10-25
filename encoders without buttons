@@ -37,10 +37,10 @@ void loop()
 {
   leftEncoderValue = 0;
   rightEncoderValue = 0;
-  delay(100);
+  delay(25);
   
   
-  if (rightEncoderValue < leftEncoderValue)
+  if (rightEncoderValue/2 < leftEncoderValue/2)
   {
      if (LEpowerInPercents > 0)
          LEpowerInPercents = LEpowerInPercents - 2.5;
@@ -57,7 +57,7 @@ void loop()
   Serial.println (LEpowerInPercents);  
 
   
-  if (leftEncoderValue < rightEncoderValue)
+  if (leftEncoderValue/2 < rightEncoderValue/2)
   {
      if (REpowerInPercents > 0)
          REpowerInPercents = REpowerInPercents - 2.5;
@@ -75,7 +75,7 @@ void loop()
    
      
      
-  if (leftEncoderValue == rightEncoderValue)
+  if (leftEncoderValue/2 == rightEncoderValue/2)
   {   
      float onePercent = 2.55;
      float LEpower = LEpowerInPercents*onePercent;
