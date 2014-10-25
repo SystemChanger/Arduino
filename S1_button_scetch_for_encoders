@@ -14,8 +14,7 @@ int E2 = 6;
 int M1 = 4;
 int M2 = 7;
 
-float LEpowerInPercents = 100;          //   1. <--- Значения двигателей.
-float REpowerInPercents = 100;         //
+
 
 
 void setup() 
@@ -47,7 +46,7 @@ void rightEncoder()
 int S1_Status = 0;
 
 
-void go (LEpowerInPercents, REpowerInPercents)             //  3. <----- Без "float" перед переменными "ругается".
+void go (float LEpowerInPercents, float REpowerInPercents)             //  3. <----- Без "float" перед переменными "ругается".
 {
   leftEncoderValue = 0;
   rightEncoderValue = 0;
@@ -55,7 +54,7 @@ void go (LEpowerInPercents, REpowerInPercents)             //  3. <----- Без 
   
   if (leftEncoderValue < rightEncoderValue)
   {
-     REpowerInPercents = 0;
+     REpowerInPercents--;
      float onePercent = 2.55;
      float LEpower = LEpowerInPercents*onePercent;
      float REpower = REpowerInPercents*onePercent;
@@ -68,7 +67,7 @@ void go (LEpowerInPercents, REpowerInPercents)             //  3. <----- Без 
   
   if (rightEncoderValue < leftEncoderValue)
   {
-     LEpowerInPercents = 0;
+     LEpowerInPercents--;
      float onePercent = 2.55;
      float LEpower = LEpowerInPercents*onePercent;
      float REpower = REpowerInPercents*onePercent;
@@ -109,6 +108,10 @@ void loop()
   if (sensorValue == S1)
   {
     S1_Status = 1;
+    
+   volatile float LEpowerInPercents = 100;          //   1. <--- Значения двигателей.
+   volatile float REpowerInPercents = 100;         //
+    
     go (LEpowerInPercents, REpowerInPercents);        //     2. <------ Использование данных в п.1 значений двигателей.
   }
   
@@ -124,4 +127,3 @@ void loop()
 
   
 }
-
