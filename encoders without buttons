@@ -1,0 +1,90 @@
+int E1 = 5;
+int E2 = 6;
+int M1 = 4;
+int M2 = 7;
+
+
+
+void setup() 
+{
+
+  Serial. begin (9600);
+  attachInterrupt (0, leftEncoder, CHANGE);
+  attachInterrupt (1, rightEncoder, CHANGE);
+  
+}
+
+
+int leftEncoderValue = 0;
+void leftEncoder()
+{
+  leftEncoderValue++;
+}
+
+
+int rightEncoderValue = 0;
+void rightEncoder()
+{
+  rightEncoderValue++;
+}
+
+
+float LEpowerInPercents = 90;
+float REpowerInPercents = 90;
+
+
+void loop()
+{
+  leftEncoderValue = 0;
+  rightEncoderValue = 0;
+  delay(10);
+  
+  
+  if (rightEncoderValue < leftEncoderValue && LEpowerInPercents > 0)
+  {
+     if (LEpowerInPercents > 0)
+         LEpowerInPercents = LEpowerInPercents - 2.5;
+     if (REpowerInPercents < 100)  
+         REpowerInPercents = REpowerInPercents + 2.5;
+     float onePercent = 2.55;
+     float LEpower = LEpowerInPercents*onePercent;
+     float REpower = REpowerInPercents*onePercent;
+     analogWrite (E1, LEpower);
+     digitalWrite(M1, HIGH);
+     analogWrite (E2, REpower);
+     digitalWrite(M2, HIGH);
+  }
+  Serial.println (LEpowerInPercents);  
+
+  
+  if (leftEncoderValue < rightEncoderValue && REpowerInPercents > 0)
+  {
+     if (REpowerInPercents > 0)
+         REpowerInPercents = REpowerInPercents - 2.5;
+     if (LEpowerInPercents <100)
+         LEpowerInPercents = LEpowerInPercents + 2.5;     
+     float onePercent = 2.55;
+     float LEpower = LEpowerInPercents*onePercent;
+     float REpower = REpowerInPercents*onePercent;
+     analogWrite (E1, LEpower);
+     digitalWrite(M1, HIGH);
+     analogWrite (E2, REpower);
+     digitalWrite(M2, HIGH);  
+  }
+  Serial.println (REpowerInPercents);
+   
+     
+     
+  if (leftEncoderValue == rightEncoderValue)
+  {   
+     float onePercent = 2.55;
+     float LEpower = LEpowerInPercents*onePercent;
+     float REpower = REpowerInPercents*onePercent;
+     analogWrite (E1, LEpower);
+     digitalWrite(M1, HIGH);
+     analogWrite (E2, REpower);
+     digitalWrite(M2, HIGH);
+  }
+
+
+}
