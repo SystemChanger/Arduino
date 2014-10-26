@@ -19,7 +19,8 @@ int leftEncoderValue = 0;
 void leftEncoder()
 {
   leftEncoderValue++;
-
+Serial.println ("L:");
+Serial.println (leftEncoderValue);
 }
 
 
@@ -27,19 +28,20 @@ int rightEncoderValue = 0;
 void rightEncoder()
 {
   rightEncoderValue++;
-
+Serial.println ("R:");
+Serial.println (rightEncoderValue);
 }
 
 
-float LEpowerInPercents = 80;
-float REpowerInPercents = 97.50;
+float LEpowerInPercents = 90;
+float REpowerInPercents = 90;
 
 
 void loop()
 {
   leftEncoderValue = 0;
   rightEncoderValue = 0;
-  delay(500);
+  delay(300);
   
   
   if (rightEncoderValue < leftEncoderValue)
@@ -57,8 +59,7 @@ void loop()
      digitalWrite(M2, HIGH);
   }
 
-Serial.println ("L:");
-Serial.println (LEpowerInPercents);
+
   
   if (leftEncoderValue < rightEncoderValue)
   {
@@ -75,8 +76,6 @@ Serial.println (LEpowerInPercents);
      digitalWrite(M2, HIGH);  
   }
 
-Serial.println ("R:");
-Serial.println (REpowerInPercents);
      
      
   if (leftEncoderValue == rightEncoderValue)
