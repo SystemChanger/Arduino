@@ -19,8 +19,7 @@ int leftEncoderValue = 0;
 void leftEncoder()
 {
   leftEncoderValue++;
-Serial.println ("L:");
-Serial.println (leftEncoderValue);
+  Serial.println ("LE:"); Serial.println (leftEncoderValue);
 }
 
 
@@ -28,28 +27,29 @@ int rightEncoderValue = 0;
 void rightEncoder()
 {
   rightEncoderValue++;
-Serial.println ("R:");
-Serial.println (rightEncoderValue);
+  Serial.println ("RE:"); Serial.println (rightEncoderValue);
 }
 
 
-float LEpowerInPercents = 90;
-float REpowerInPercents = 90;
+float LEpowerInPercents = 81;
+float REpowerInPercents = 95;
 
 
 void loop()
 {
   leftEncoderValue = 0;
   rightEncoderValue = 0;
-  delay(300);
+  delay(600);
   
   
   if (rightEncoderValue < leftEncoderValue)
   {
      if (LEpowerInPercents > 70)
-         LEpowerInPercents = LEpowerInPercents - 2.5;
+         LEpowerInPercents = LEpowerInPercents - 1;
      if (REpowerInPercents < 100)  
-         REpowerInPercents = REpowerInPercents + 2.5;
+         REpowerInPercents = REpowerInPercents + 1;
+     if (LEpowerInPercents < 70 && REpowerInPercents <100)
+         REpowerInPercents = REpowerInPercents + 1;
      float onePercent = 2.55;
      float LEpower = LEpowerInPercents*onePercent;
      float REpower = REpowerInPercents*onePercent;
@@ -64,9 +64,11 @@ void loop()
   if (leftEncoderValue < rightEncoderValue)
   {
      if (REpowerInPercents > 70)
-         REpowerInPercents = REpowerInPercents - 2.5;
+         REpowerInPercents = REpowerInPercents - 1;
      if (LEpowerInPercents < 100)
-         LEpowerInPercents = LEpowerInPercents + 2.5;     
+         LEpowerInPercents = LEpowerInPercents + 1;
+     if (REpowerInPercents < 70 && LEpowerInPercents <100)
+         LEpowerInPercents = LEpowerInPercents + 1;         
      float onePercent = 2.55;
      float LEpower = LEpowerInPercents*onePercent;
      float REpower = REpowerInPercents*onePercent;
@@ -88,6 +90,7 @@ void loop()
      analogWrite (E2, REpower);
      digitalWrite(M2, HIGH);
   }
+
 
 
 }
