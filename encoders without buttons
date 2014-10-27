@@ -19,7 +19,6 @@ int leftEncoderValue = 0;
 void leftEncoder()
 {
   leftEncoderValue++;
-  Serial.println ("LE:"); Serial.println (leftEncoderValue);
 }
 
 
@@ -27,7 +26,6 @@ int rightEncoderValue = 0;
 void rightEncoder()
 {
   rightEncoderValue++;
-  Serial.println ("RE:"); Serial.println (rightEncoderValue);
 }
 
 
@@ -91,6 +89,7 @@ void loop()
      digitalWrite(M2, HIGH);
   }
 
-
+Serial.println ("LE:"); Serial.println (LEpowerInPercents);
+Serial.println ("RE:"); Serial.println (REpowerInPercents);
 
 }
