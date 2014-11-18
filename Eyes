@@ -1,0 +1,110 @@
+#include <SoftwareSerial.h>
+#include <URMSerial.h>
+
+/*------Пины двигателей------*/
+int E1 = 5;
+int E2 = 6;
+int M1 = 4;
+int M2 = 7;
+/*--------------------------*/
+
+
+
+URMSerial urm;
+
+int value; // This value will be populated
+int getMeasurement()
+{
+  // Request a distance reading from the URM37
+  switch(urm.requestMeasurementOrTimeout(DISTANCE, value)) // Find out the type of request
+  {
+  case DISTANCE: // Double check the reading we recieve is of DISTANCE type
+    //    Serial.println(value); // Fetch the distance in centimeters from the URM37
+    return value;
+    break;
+  case TEMPERATURE:
+    return value;
+    break;
+  case ERROR:
+    Serial.println("Error");
+    break;
+  case NOTREADY:
+    Serial.println("Not Ready");
+    break;
+  case TIMEOUT:
+    Serial.println("Timeout");
+    break;
+  } 
+
+  return -1;
+}
+/*-----------------------------------------------------SETUP-----------------------------------------------------*/
+void setup() 
+{
+  Serial.begin(9600);                  // Sets the baud rate to 9600
+  urm.begin(8,9,9600);                 // RX Pin, TX Pin, Baud Rate
+  Serial.println("URM37 Library by Miles Burton - Distance. Version 2.0");   // Shameless plug 
+}
+/*---------------------------------------------------------------------------------------------------------------*/
+
+
+
+/*---------------------------------------------------FUNCTIONS---------------------------------------------------*/
+void goFront(int E1speed, int E2speed)
+{
+  analogWrite (E1, E1speed);
+  digitalWrite (M1, HIGH);
+  analogWrite (E2, E2speed);
+  digitalWrite (M2, HIGH);
+}
+
+void goBack(int E1speed, int E2speed)
+{
+  analogWrite (E1, E1speed);
+  digitalWrite (M1, LOW);
+  analogWrite (E2, E2speed);
+  digitalWrite (M2, LOW);
+}
+
+void stop()
+{
+  analogWrite (E1, 0);
+  analogWrite (E2, 0);
+}
+
+void goToWall()
+{
+  getMeasurement();
+  
+  if (getMeasurement() >= 20)
+  {
+    goFront(200, 200);
+  }
+  else
+  {
+    delay(50);
+    stop();
+  }
+     
+  if (getMeasurement() < 15)
+  {
+    goBack(100, 100);
+  }
+  else
+  {
+    delay(50);
+    stop();
+  }
+}
+/*---------------------------------------------------------------------------------------------------------------*/
+
+
+
+
+/*--------------------------------------------------MAIN CYCLE---------------------------------------------------*/
+void loop()
+{
+  goToWall();
+}
+/*---------------------------------------------------------------------------------------------------------------*/
+
