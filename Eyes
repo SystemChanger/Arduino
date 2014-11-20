@@ -1,6 +1,6 @@
 #include <SoftwareSerial.h>
 #include <URMSerial.h>
-#include <Servo.h>
+#include <Servo.h> 
 
 /*------Пины двигателей------*/
 int E1 = 5;
@@ -11,11 +11,11 @@ int M2 = 7;
 
 /*-----------SERVO----------*/
 Servo myservo;
-int pos = 0;    // variable to store the servo position 
 int center = 90;
 int left = 180;
 int right = 0;
 /*--------------------------*/
+
 
 /*------------------------------------URM code--------------------------------------------*/
 URMSerial urm;
@@ -56,7 +56,9 @@ void setup()
   Serial.begin(9600);                  // Sets the baud rate to 9600
   urm.begin(8,9,9600);                 // RX Pin, TX Pin, Baud Rate
   Serial.println("URM37 Library by Miles Burton - Distance. Version 2.0");   // Shameless plug 
-  myservo.attach(10);  // attaches the servo on pin 10 to the servo object 
+  
+  // Set servo boundaries
+  myservo.attach(0);  // attaches the servo on pin 10 to the servo object 
 }
 /*---------------------------------------------------------------------------------------------------------------*/
 
@@ -102,7 +104,17 @@ void moveToObject()
 
 void scan()
 {
-   myservo.write(center);
+  for (int pos = 0; pos < 180; pos++)
+  {
+    myservo.write(pos);
+    delay(15);
+  }
+  
+  for (int pos = 180; pos > 0; pos--)
+  {
+    myservo.write(pos);
+    delay(15);
+  }
 }
 /*---------------------------------------------------------------------------------------------------------------*/
 
@@ -112,6 +124,7 @@ void scan()
 /*--------------------------------------------------MAIN CYCLE---------------------------------------------------*/
 void loop()
 {
-  moveToObject();
+  moveFront(100, 100);
+  scan();
 }
 /*---------------------------------------------------------------------------------------------------------------*/
