@@ -1,5 +1,6 @@
 #include <SoftwareSerial.h>
 #include <URMSerial.h>
+#include <Servo.h>
 
 /*------Пины двигателей------*/
 int E1 = 5;
@@ -8,8 +9,15 @@ int M1 = 4;
 int M2 = 7;
 /*--------------------------*/
 
+/*-----------SERVO----------*/
+Servo myservo;
+int pos = 0;    // variable to store the servo position 
+int center = 90;
+int left = 180;
+int right = 0;
+/*--------------------------*/
 
-
+/*------------------------------------URM code--------------------------------------------*/
 URMSerial urm;
 
 int value; // This value will be populated
@@ -38,19 +46,24 @@ int getMeasurement()
 
   return -1;
 }
+/*----------------------------------------------------------------------------------------*/
+
+
+
 /*-----------------------------------------------------SETUP-----------------------------------------------------*/
 void setup() 
 {
   Serial.begin(9600);                  // Sets the baud rate to 9600
   urm.begin(8,9,9600);                 // RX Pin, TX Pin, Baud Rate
   Serial.println("URM37 Library by Miles Burton - Distance. Version 2.0");   // Shameless plug 
+  myservo.attach(10);  // attaches the servo on pin 10 to the servo object 
 }
 /*---------------------------------------------------------------------------------------------------------------*/
 
 
 
 /*---------------------------------------------------FUNCTIONS---------------------------------------------------*/
-void goFront(int E1speed, int E2speed)
+void moveFront(int E1speed, int E2speed)
 {
   analogWrite (E1, E1speed);
   digitalWrite (M1, HIGH);
@@ -58,7 +71,7 @@ void goFront(int E1speed, int E2speed)
   digitalWrite (M2, HIGH);
 }
 
-void goBack(int E1speed, int E2speed)
+void moveBack(int E1speed, int E2speed)
 {
   analogWrite (E1, E1speed);
   digitalWrite (M1, LOW);
@@ -72,29 +85,24 @@ void stop()
   analogWrite (E2, 0);
 }
 
-void goToWall()
+void moveToObject()
 {
-  getMeasurement();
-  
-  if (getMeasurement() >= 20)
+  while (getMeasurement() >= 20)
   {
-    goFront(200, 200);
-  }
-  else
-  {
-    delay(50);
+    moveFront(200, 200);
+  } 
     stop();
-  }
-     
-  if (getMeasurement() < 15)
+   
+  while (getMeasurement() < 15)
   {
-    goBack(100, 100);
+    moveBack(100, 100);
   }
-  else
-  {
-    delay(50);
     stop();
-  }
+}
+
+void scan()
+{
+   myservo.write(center);
 }
 /*---------------------------------------------------------------------------------------------------------------*/
 
@@ -104,7 +112,6 @@ void goToWall()
 /*--------------------------------------------------MAIN CYCLE---------------------------------------------------*/
 void loop()
 {
-  goToWall();
+  moveToObject();
 }
 /*---------------------------------------------------------------------------------------------------------------*/
-
