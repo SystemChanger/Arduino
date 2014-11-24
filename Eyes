@@ -14,6 +14,7 @@ Servo myservo;
 int center = 90;
 int left = 180;
 int right = 0;
+int pos = 90;
 /*--------------------------*/
 
 
@@ -58,10 +59,12 @@ void setup()
   Serial.println("URM37 Library by Miles Burton - Distance. Version 2.0");   // Shameless plug 
   
   // Set servo boundaries
-  myservo.attach(0);  // attaches the servo on pin 10 to the servo object 
+  myservo.attach(13);  // attaches the servo on pin 10 to the servo object 
+  myservo.write(90);
+  delay(500);
+  myservo.detach();
 }
 /*---------------------------------------------------------------------------------------------------------------*/
-
 
 
 /*---------------------------------------------------FUNCTIONS---------------------------------------------------*/
@@ -94,7 +97,7 @@ void moveToObject()
     moveFront(200, 200);
   } 
     stop();
-   
+    
   while (getMeasurement() < 15)
   {
     moveBack(100, 100);
@@ -102,19 +105,36 @@ void moveToObject()
     stop();
 }
 
+void scanLeft()
+{
+  for (;pos < 145; pos++)
+  {
+    myservo.attach(13);
+    delay(5);
+    myservo.write(pos);
+    delay(15);
+    myservo.detach();
+  }
+  Serial.println(getMeasurement());
+}
+
+void scanRight()
+{
+  for (;pos > 0; pos--)
+  {
+    myservo.attach(13);
+    delay(5);
+    myservo.write(pos);
+    delay(15);
+    myservo.detach();
+  }
+  Serial.println(getMeasurement());
+}
+
 void scan()
 {
-  for (int pos = 0; pos < 180; pos++)
-  {
-    myservo.write(pos);
-    delay(15);
-  }
-  
-  for (int pos = 180; pos > 0; pos--)
-  {
-    myservo.write(pos);
-    delay(15);
-  }
+  scanLeft();
+  scanRight();
 }
 /*---------------------------------------------------------------------------------------------------------------*/
 
@@ -124,7 +144,6 @@ void scan()
 /*--------------------------------------------------MAIN CYCLE---------------------------------------------------*/
 void loop()
 {
-  moveFront(100, 100);
   scan();
 }
 /*---------------------------------------------------------------------------------------------------------------*/
