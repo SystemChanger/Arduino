@@ -1,0 +1,56 @@
+/*------------------------------------URM code--------------------------------------------*/
+URMSerial urm;
+
+int maxMeasurement = 0;
+int value; // This value will be populated
+int getMeasurement()
+{
+  // Request a distance reading from the URM37
+  switch(requestMeasurementOrTimeoutWithServo(DISTANCE, value)) // Find out the type of request
+  {
+  case DISTANCE: // Double check the reading we recieve is of DISTANCE type
+    //    Serial.println(value); // Fetch the distance in centimeters from the URM37
+    return value;
+    break;
+  case TEMPERATURE:
+    return value;
+    break;
+  case ERROR:
+    Serial.println("Error");
+    break;
+  case NOTREADY:
+    Serial.println("Not Ready");
+    break;
+  case TIMEOUT:
+    Serial.println("Timeout");
+    break;
+  } 
+
+  return -1;
+}
+/*----------------------------------------------------------------------------------------*/
+
+
+/*-----------------------------Modified requestMeasurementOrTimeout-----------------------*/
+byte requestMeasurementOrTimeoutWithServo(byte mType, int& value)
+{
+    // Request measurement or fail
+    if(!urm.requestMeasurement(mType))
+    {
+        return NOTREADY;
+    }
+
+    // Wait until we either timeout or we have a reading
+    while(!urm.reqTimeout() && !urm.hasReading())
+    {
+        delay(10); // Wait a bit
+    }
+
+    // Request has timed out, FAIL
+    if(urm.reqTimeout()) return TIMEOUT;
+
+    // Pass control to getMeasurement which will return the requested measurement
+    return getMeasurement(value);
+
+}
+/*----------------------------------------------------------------------------------------*/
