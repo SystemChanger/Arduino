@@ -11,16 +11,21 @@ int M2 = 7;
 
 /*-----------SERVO----------*/
 Servo myservo;
-int center = 90;
-int left = 180;
-int right = 0;
 int pos = 90;
+int maxMeasurementPosition = 0;
+char side = '0';
+float degreesToTurn = 0;
 /*--------------------------*/
 
+/*---------ENCODERS---------*/
+int rightEncoderValue = 0;
+int leftEncoderValue = 0;
+/*--------------------------*/
 
 /*------------------------------------URM code--------------------------------------------*/
 URMSerial urm;
 
+int maxMeasurement = 0;
 int value; // This value will be populated
 int getMeasurement()
 {
@@ -57,12 +62,14 @@ void setup()
   Serial.begin(9600);                  // Sets the baud rate to 9600
   urm.begin(8,9,9600);                 // RX Pin, TX Pin, Baud Rate
   Serial.println("URM37 Library by Miles Burton - Distance. Version 2.0");   // Shameless plug 
-  
+
   // Set servo boundaries
   myservo.attach(13);  // attaches the servo on pin 10 to the servo object 
   myservo.write(90);
   delay(500);
-  myservo.detach();
+  
+  attachInterrupt (0, leftEncoder, CHANGE);
+  attachInterrupt (1, rightEncoder, CHANGE);
 }
 /*---------------------------------------------------------------------------------------------------------------*/
 
@@ -84,6 +91,18 @@ void moveBack(int E1speed, int E2speed)
   digitalWrite (M2, LOW);
 }
 
+void turnLeft(int E2speed)
+{
+  analogWrite (E2, E2speed);
+  digitalWrite (M2, HIGH);
+}
+
+void turnRight(int E1speed)
+{
+  analogWrite (E1, E1speed);
+  digitalWrite (M1, HIGH);
+}
+
 void stop()
 {
   analogWrite (E1, 0);
@@ -96,45 +115,115 @@ void moveToObject()
   {
     moveFront(200, 200);
   } 
-    stop();
-    
+  stop();
+
   while (getMeasurement() < 15)
   {
     moveBack(100, 100);
   }
-    stop();
+  stop();
 }
 
 void scanLeft()
 {
-  for (;pos < 145; pos++)
+  for (;pos < 180; pos = pos + 5)
   {
-    myservo.attach(13);
-    delay(5);
     myservo.write(pos);
-    delay(15);
-    myservo.detach();
+    delay(20);
+    if (getMeasurement() > maxMeasurement - 2)
+    {
+      maxMeasurement = getMeasurement();
+      maxMeasurementPosition = pos;
+      if (pos > 90) 
+         side = 'l';
+    }
   }
-  Serial.println(getMeasurement());
 }
 
 void scanRight()
 {
-  for (;pos > 0; pos--)
+  for (;pos > 20; pos = pos - 5)
   {
-    myservo.attach(13);
-    delay(5);
     myservo.write(pos);
-    delay(15);
-    myservo.detach();
+    delay(20);
+    if (getMeasurement() > maxMeasurement - 2)
+    {
+      maxMeasurement = getMeasurement();
+      maxMeasurementPosition = pos;
+      if (pos < 90)
+         side = 'r';
+    }
   }
-  Serial.println(getMeasurement());
 }
 
 void scan()
 {
+  myservo.attach(13);
+  delay(5);
+
+  maxMeasurement = 0;
   scanLeft();
   scanRight();
+
+  myservo.detach();
+}
+
+void centerServo()
+{
+  myservo.attach(13);
+  delay(5);
+
+  myservo.write(90);
+  delay(300);
+
+  myservo.detach();
+}
+
+void degreesToTurnF()
+{
+  if (maxMeasurementPosition < 90)
+      degreesToTurn = (float)(90 - maxMeasurementPosition) / 1.896;
+  else
+      degreesToTurn = (float)(maxMeasurementPosition - 90) / 1.896;
+}
+
+void turnToFarestObject()
+{ 
+  centerServo();
+  degreesToTurnF();
+
+  leftEncoderValue = 0;
+  rightEncoderValue = 0;
+
+  while (side == 'l' && rightEncoderValue < degreesToTurn)
+  {
+    turnLeft(75);
+  }
+  stop();
+
+  while (side == 'r' && leftEncoderValue < degreesToTurn)
+  {
+    turnRight(75);
+  }
+  stop();
+}
+
+void moveToFarestObject()
+{  
+  turnToFarestObject();
+  moveToObject();
+}
+
+
+
+void leftEncoder()
+{
+  leftEncoderValue++;
+}
+
+void rightEncoder()
+{
+  rightEncoderValue++;
 }
 /*---------------------------------------------------------------------------------------------------------------*/
 
@@ -145,5 +234,7 @@ void scan()
 void loop()
 {
   scan();
+  Serial.println(side);
+  Serial.println(degreesToTurn);
 }
 /*---------------------------------------------------------------------------------------------------------------*/
