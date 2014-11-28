@@ -1,6 +1,5 @@
 #include <SoftwareSerial.h>
 #include <URMSerial.h>
-#include <Servo.h> 
 
 /*------Пины двигателей------*/
 int E1 = 5;
@@ -10,11 +9,14 @@ int M2 = 7;
 /*--------------------------*/
 
 /*-----------SERVO----------*/
-Servo myservo;
-int pos = 90;
+int servo = 13;
+int left = 200;
+int center = 130;
+int right = 75;
+int pos = center;
 int maxMeasurementPosition = 0;
 char side = '0';
-float degreesToTurn = 0;
+int degreesToTurn = 0;
 /*--------------------------*/
 
 /*---------ENCODERS---------*/
@@ -30,7 +32,7 @@ int value; // This value will be populated
 int getMeasurement()
 {
   // Request a distance reading from the URM37
-  switch(requestMeasurementOrTimeoutWithServo(DISTANCE, value)) // Find out the type of request
+  switch(urm.requestMeasurementOrTimeout(DISTANCE, value)) // Find out the type of request
   {
   case DISTANCE: // Double check the reading we recieve is of DISTANCE type
     //    Serial.println(value); // Fetch the distance in centimeters from the URM37
@@ -40,6 +42,8 @@ int getMeasurement()
     return value;
     break;
   case ERROR:
+    maxMeasurement++;
+    maxMeasurementPosition = pos;
     Serial.println("Error");
     break;
   case NOTREADY:
@@ -55,44 +59,14 @@ int getMeasurement()
 /*----------------------------------------------------------------------------------------*/
 
 
-/*-----------------------------Modified requestMeasurementOrTimeout-----------------------*/
-byte requestMeasurementOrTimeoutWithServo(byte mType, int& value)
-{
-    // Request measurement or fail
-    if(!urm.requestMeasurement(mType))
-    {
-        return NOTREADY;
-    }
-
-    // Wait until we either timeout or we have a reading
-    while(!urm.reqTimeout() && !urm.hasReading())
-    {
-        myservo.write(pos);
-        delay(10); // Wait a bit
-    }
-
-    // Request has timed out, FAIL
-    if(urm.reqTimeout()) return TIMEOUT;
-
-    // Pass control to getMeasurement which will return the requested measurement
-    return urm.getMeasurement(value);
-
-}
-/*----------------------------------------------------------------------------------------*/
-
-
-
-
 /*-----------------------------------------------------SETUP-----------------------------------------------------*/
 void setup() 
 {
   Serial.begin(9600);                  // Sets the baud rate to 9600
   urm.begin(8,9,9600);                 // RX Pin, TX Pin, Baud Rate
   Serial.println("URM37 Library by Miles Burton - Distance. Version 2.0");   // Shameless plug 
-
-  // Set servo boundaries
-  myservo.attach(13);  // attaches the servo on pin 10 to the servo object 
-  myservo.write(90);
+  
+  analogWrite(servo, center);
   delay(500);
   
   attachInterrupt (0, leftEncoder, CHANGE);
@@ -138,7 +112,7 @@ void stop()
 
 void moveToObject()
 {
-  while (getMeasurement() >= 20)
+  while (getMeasurement() >= 20 || getMeasurement() == ERROR)
   {
     moveFront(200, 200);
   } 
@@ -153,74 +127,85 @@ void moveToObject()
 
 void scanLeft()
 {
-  for (;pos < 180; pos = pos++)
-  {
-    myservo.write(pos);
-    delay(15);
-    if (getMeasurement() > maxMeasurement - 2)
-    {
-      maxMeasurement = getMeasurement();
-      maxMeasurementPosition = pos;
-      if (pos > 90) 
-         side = 'l';
-    }
-  }
+   for(; pos < left ; pos +=5) 
+   { 
+     analogWrite(servo, pos);           
+     delay(30);  
+     
+     if (getMeasurement() > maxMeasurement - 2)
+     {
+       maxMeasurement = getMeasurement();
+       maxMeasurementPosition = pos;
+       
+       if (pos < 140)
+         side = 'r';  
+     }  
+   } 
 }
 
 void scanRight()
 {
-  for (;pos > 20; pos = pos--)
-  {
-    myservo.write(pos);
-    delay(15);
-    if (getMeasurement() > maxMeasurement - 2)
-    {
-      maxMeasurement = getMeasurement();
-      maxMeasurementPosition = pos;
-      if (pos < 90)
-         side = 'r';
-    }
-  }
+   for(; pos > right; pos -=5) 
+   { 
+     analogWrite(servo, pos);           
+     delay(30);  
+     
+     if (getMeasurement() > maxMeasurement - 2)
+     {
+       maxMeasurement = getMeasurement();
+       maxMeasurementPosition = pos;
+       
+       if (pos > center)
+         side = 'l';  
+     }  
+   } 
 }
 
 void scan()
 {
-  maxMeasurement = 0;
+  maxMeasurement = getMeasurement();
+  maxMeasurementPosition = center;
+  side = '0';
+  
   scanLeft();
   scanRight();
 }
 
 void centerServo()
 {
-  myservo.write(90);
-  delay(300);
-}
-
-void degreesToTurnF()
-{
-  if (maxMeasurementPosition < 90)
-      degreesToTurn = (float)(90 - maxMeasurementPosition) / 1.896;
-  else
-      degreesToTurn = (float)(maxMeasurementPosition - 90) / 1.896;
+  analogWrite(servo, 140);    
+  delay(500);
 }
 
 void turnToFarestObject()
 { 
   centerServo();
-  degreesToTurnF();
+  
+  if (side == 'l')
+      degreesToTurn = (maxMeasurementPosition - 130) / 3.7 ;
+      
+  if (side == 'r')
+      degreesToTurn = (130 - maxMeasurementPosition) / 3.7 ;
 
   leftEncoderValue = 0;
   rightEncoderValue = 0;
-
+  
+  
+  while (getMeasurement() < 15)
+  {
+    moveBack(100, 100);
+  }
+  stop();
+  
   while (side == 'l' && rightEncoderValue < degreesToTurn)
   {
-    turnLeft(75);
+    turnLeft(100);
   }
   stop();
 
   while (side == 'r' && leftEncoderValue < degreesToTurn)
   {
-    turnRight(75);
+    turnRight(100);
   }
   stop();
 }
@@ -250,6 +235,7 @@ void rightEncoder()
 /*--------------------------------------------------MAIN CYCLE---------------------------------------------------*/
 void loop()
 {
-  getMeasurement();
+  scan();
+  moveToFarestObject();
 }
 /*---------------------------------------------------------------------------------------------------------------*/
