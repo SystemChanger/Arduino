@@ -1,0 +1,112 @@
+/*------Пины двигателей------*/
+int E1 = 5;
+int E2 = 6;
+int M1 = 4;
+int M2 = 7;
+/*--------------------------*/
+
+/*---------ENCODERS---------*/
+int rightEncoderValue = 0;
+int leftEncoderValue = 0;
+/*--------------------------*/
+
+/*-----------line sensor-----------*/
+int b = HIGH;  //black colour
+int w = LOW;   //white colour
+/*---------------------------------*/
+
+
+/*-------------------SETUP-------------------*/
+void setup() 
+{
+ Serial.begin (9600);
+ 
+ attachInterrupt (0, leftEncoder, CHANGE);
+ attachInterrupt (1, rightEncoder, CHANGE);
+}
+/*-------------------------------------------*/
+
+
+/*-------------------FUNCTIONS-------------------*/
+//////////////
+void moveFront(int E1speed, int E2speed)
+{
+  analogWrite (E1, E1speed);
+  digitalWrite (M1, HIGH);
+  analogWrite (E2, E2speed);
+  digitalWrite (M2, HIGH);
+}
+
+/////////////
+void moveBack(int E1speed, int E2speed)
+{
+  analogWrite (E1, E1speed);
+  digitalWrite (M1, LOW);
+  analogWrite (E2, E2speed);
+  digitalWrite (M2, LOW);
+}
+
+/////////////
+void turnLeft(int E2speed)
+{
+  analogWrite (E2, E2speed);
+  digitalWrite (M2, HIGH);
+}
+
+/////////////
+void turnRight(int E1speed)
+{
+  analogWrite (E1, E1speed);
+  digitalWrite (M1, HIGH);
+}
+
+/////////////
+void stop()
+{
+  analogWrite (E1, 0);
+  analogWrite (E2, 0);
+}
+
+/////////////
+void leftEncoder()
+{
+  leftEncoderValue++;
+}
+
+/////////////
+void rightEncoder()
+{
+  rightEncoderValue++;
+}
+
+/////////////
+void turnLeftToLine(int E2speed)
+{
+  rightEncoderValue = 0;
+  while (digitalRead(A0) != b && rightEncoderValue < 40)
+  {
+    turnLeft(E2speed);
+  }
+  stop(); 
+}
+
+/////////////
+void turnRightToLine(int E1speed)
+{
+  leftEncoderValue = 0;
+  while (digitalRead(A0) != b && leftEncoderValue < 40)
+  {
+    turnRight(E1speed);
+  }
+  stop();
+}
+/*-----------------------------------------------*/
+
+
+
+
+void loop()  
+{
+  turnLeftToLine(255);
+  turnRightToLine(255);
+}
