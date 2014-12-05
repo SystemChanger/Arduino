@@ -87,6 +87,7 @@ void turnLeftToLine(int E2speed)
   {
     turnLeft(E2speed);
   }
+  delay(100);
   stop(); 
 }
 
@@ -98,6 +99,7 @@ void turnRightToLine(int E1speed)
   {
     turnRight(E1speed);
   }
+  delay(100);
   stop();
 }
 /*-----------------------------------------------*/
