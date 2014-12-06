@@ -196,7 +196,7 @@ void turnRightToLine(int E1speed)
 
 void loop()  
 {
-  resetEncVal();
-  moveOnLine(100, 100);
-  correctMovement();
+  resetEncVal(); // Обнуляем показания энкодеров
+  moveOnLine(100, 100); // Едем по линии пока не сойдём с неё
+  correctMovement(); // Возвращаемся на линию
 }
