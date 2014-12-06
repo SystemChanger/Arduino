@@ -1,0 +1,202 @@
+/*------Пины двигателей------*/
+int E1 = 5;
+int E2 = 6;
+int M1 = 4;
+int M2 = 7;
+/*--------------------------*/
+
+/*---------ENCODERS---------*/
+int rightEncoderValue = 0;
+int leftEncoderValue = 0;
+/*--------------------------*/
+
+/*-----------line sensor-----------*/
+int b = HIGH;  //black colour
+int w = LOW;   //white colour
+/*---------------------------------*/
+
+
+/*-------------------SETUP-------------------*/
+void setup() 
+{
+ Serial.begin (9600);
+ 
+ attachInterrupt (0, leftEncoder, CHANGE);
+ attachInterrupt (1, rightEncoder, CHANGE);
+ 
+ turnLeftToLine(100);
+ delay(3000);
+}
+/*-------------------------------------------*/
+
+
+/*-------------------FUNCTIONS-------------------*/
+//////////////
+void moveForward(int E1speed, int E2speed)
+{
+  analogWrite (E1, E1speed);
+  digitalWrite (M1, HIGH);
+  analogWrite (E2, E2speed);
+  digitalWrite (M2, HIGH);
+}
+
+/////////////
+void moveBackward(int E1speed, int E2speed)
+{
+  analogWrite (E1, E1speed);
+  digitalWrite (M1, LOW);
+  analogWrite (E2, E2speed);
+  digitalWrite (M2, LOW);
+}
+
+/////////////
+void turnLeft(int E2speed)
+{
+  analogWrite (E2, E2speed);
+  digitalWrite (M2, HIGH);
+}
+
+/////////////
+void turnRight(int E1speed)
+{
+  analogWrite (E1, E1speed);
+  digitalWrite (M1, HIGH);
+}
+
+/////////////
+void stop()
+{
+  analogWrite (E1, 0);
+  analogWrite (E2, 0);
+}
+
+/////////////
+void leftEncoder()
+{
+  leftEncoderValue++;
+}
+
+/////////////
+void rightEncoder()
+{
+  rightEncoderValue++;
+}
+
+/////////////
+int filter()
+{
+  int SnsrVls[10];
+  int ArrSum = 0;
+  for (int i = 0; i < 9; i++)
+  {
+    SnsrVls[i] = analogRead(A0);
+    ArrSum = ArrSum + SnsrVls[i];
+   delay(10); 
+  }
+  int AvrVal = ArrSum / 100;
+  return AvrVal;
+}
+
+/////////////
+void moveOnLine(int E1speed, int E2speed)
+{
+  while (filter() < 46)
+  {
+    moveForward(E1speed, E2speed);
+  }
+  stop();
+}
+
+/////////////
+void resetEncVal()
+{
+  leftEncoderValue = 0;
+  rightEncoderValue = 0;
+}
+
+/////////////
+char lastSide = 'l';
+void finalizeTurning()
+{
+  if (lastSide == 'l')
+  {
+   turnLeftToLine(100);
+  }
+  if (lastSide == 'r')
+  {
+   turnRightToLine(100);
+  }
+}
+
+/////////////
+void correctMovement()
+{
+    while(1)
+  {
+    if (leftEncoderValue > rightEncoderValue && leftEncoderValue > 5 /*ЗАМЕРИТЬ*/) //Если отклонялись при езде, направо, то:
+    {
+      turnLeftToLine(100);
+      lastSide = 'l';
+      break;
+    }
+    
+    if (rightEncoderValue < leftEncoderValue && rightEncoderValue > 5 /*ЗАМЕРИТЬ*/) //Если отклонялись при езде, налево, то:
+    {
+      turnRightToLine(100);
+      lastSide = 'r';
+      break;
+    }
+  
+    if (leftEncoderValue == rightEncoderValue) //Если ехали прямо, но съехали с линии, значит 'это' 'прямо' было лишь для точки с которой осуществлялось дивижение по линии, но не для линии.
+    {
+      if (lastSide == 'l') //Если прошлый поворот был налево и мы съехали при нём с линии, то:
+      {
+        turnRightToLine(100);
+        lastSide = 'r';
+        break;
+      }
+      
+      if (lastSide == 'r') // Если прошлый поворот был направо и мы съехали при нём с линии, то:
+      {
+        turnLeftToLine(100);
+        lastSide = 'l';
+        break;
+      }
+    }
+    
+     //Если к этому моменту не вышли из цикла, то значит показания энкодеров < 5
+     //А это значит, что слетели с линии из за того, что она слишком крутая. Значит надо 'докрутить'
+    finalizeTurning();
+    break;
+  }
+}
+
+/////////////
+void turnLeftToLine(int E2speed)
+{
+  while (filter() > 46)
+  {
+    turnLeft(E2speed);
+  }
+  stop(); 
+}
+
+/////////////
+void turnRightToLine(int E1speed)
+{
+  while (filter() > 46)
+  {
+    turnRight(E1speed);
+  }
+  stop();
+}
+/*-----------------------------------------------*/
+
+
+
+void loop()  
+{
+  resetEncVal();
+  moveOnLine(100, 100);
+  correctMovement();
+}
