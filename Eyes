@@ -56,10 +56,9 @@ int getMeasurement()
     Serial.println("Timeout");
     break;
   } 
-
-  return 1000;
-  maxMeasurement = 1000;
-  maxMeasurementPosition = pos;
+  
+  Serial.println("Wawe lost");
+  return(0);
 }
 /*----------------------------------------------------------------------------------------*/
 
