@@ -16,8 +16,13 @@ int right = 75;
 int pos = center;
 int maxMeasurementPosition = 0;
 char side = '0';
-int degreesToTurn = 0;
+int ticsToTurn = 0;
 /*--------------------------*/
+
+/*----------MEASUREMENT---------*/
+int leftMeasurement = 100;
+int rightMeasurement = 100;
+/*------------------------------*/
 
 /*---------ENCODERS---------*/
 int rightEncoderValue = 0;
@@ -42,8 +47,6 @@ int getMeasurement()
     return value;
     break;
   case ERROR:
-    maxMeasurement++;
-    maxMeasurementPosition = pos;
     Serial.println("Error");
     break;
   case NOTREADY:
@@ -54,7 +57,9 @@ int getMeasurement()
     break;
   } 
 
-  return -1;
+  return 1000;
+  maxMeasurement = 1000;
+  maxMeasurementPosition = pos;
 }
 /*----------------------------------------------------------------------------------------*/
 
@@ -76,7 +81,13 @@ void setup()
 
 
 /*---------------------------------------------------FUNCTIONS---------------------------------------------------*/
-void moveFront(int E1speed, int E2speed)
+void clearEncValues()
+{
+  leftEncoderValue = 0;
+  rightEncoderValue = 0;
+}
+
+void moveForward(int E1speed, int E2speed)
 {
   analogWrite (E1, E1speed);
   digitalWrite (M1, HIGH);
@@ -104,6 +115,21 @@ void turnRight(int E1speed)
   digitalWrite (M1, HIGH);
 }
 
+void turnBack(int E1speed, int E2speed)
+{
+  clearEncValues();
+  while (rightEncoderValue < 40)
+  {
+    analogWrite (E2, E2speed);
+    digitalWrite (M2, HIGH);
+    
+    analogWrite (E1, E1speed);
+    digitalWrite (M1, LOW);
+  }
+        
+
+}
+
 void stop()
 {
   analogWrite (E1, 0);
@@ -114,7 +140,7 @@ void moveToObject()
 {
   while (getMeasurement() >= 20 || getMeasurement() == ERROR)
   {
-    moveFront(200, 200);
+    moveForward(200, 200);
   } 
   stop();
 
@@ -131,8 +157,9 @@ void scanLeft()
    { 
      analogWrite(servo, pos);           
      delay(30);  
+     Serial.println(getMeasurement());
      
-     if (getMeasurement() > maxMeasurement - 2)
+     if (getMeasurement() > maxMeasurement)
      {
        maxMeasurement = getMeasurement();
        maxMeasurementPosition = pos;
@@ -140,7 +167,8 @@ void scanLeft()
        if (pos < 140)
          side = 'r';  
      }  
-   } 
+   }
+  leftMeasurement = getMeasurement(); 
 }
 
 void scanRight()
@@ -149,8 +177,9 @@ void scanRight()
    { 
      analogWrite(servo, pos);           
      delay(30);  
+     Serial.println(getMeasurement());
      
-     if (getMeasurement() > maxMeasurement - 2)
+     if (getMeasurement() > maxMeasurement)
      {
        maxMeasurement = getMeasurement();
        maxMeasurementPosition = pos;
@@ -158,7 +187,8 @@ void scanRight()
        if (pos > center)
          side = 'l';  
      }  
-   } 
+   }
+  rightMeasurement = getMeasurement(); 
 }
 
 void scan()
@@ -171,6 +201,44 @@ void scan()
   scanRight();
 }
 
+void checkForTrap()
+{
+  clearEncValues();
+  if (maxMeasurement <= 20 && leftMeasurement <= 20 && rightMeasurement <= 20)
+  {
+    while (leftEncoderValue < 25 || rightEncoderValue < 25)
+        moveBack(100, 100);
+    stop();
+    
+    turnBack(100, 100);
+    stop();
+    
+  leftMeasurement = 200;
+  rightMeasurement = 200;
+  }
+
+}
+
+void checkForLane()
+{
+  clearEncValues();
+  if (leftMeasurement <= 10)
+  {
+    while (rightEncoderValue < 15)
+        moveBack(85, 150);
+    stop();
+    
+    leftMeasurement = 200;
+  }
+  if (rightMeasurement <= 10)
+  {
+    while (leftEncoderValue < 15)
+        moveBack(150, 85);
+    stop();
+    rightMeasurement = 200;
+  }
+}
+
 void centerServo()
 {
   analogWrite(servo, 140);    
@@ -180,15 +248,17 @@ void centerServo()
 void turnToFarestObject()
 { 
   centerServo();
+  clearEncValues();
   
   if (side == 'l')
-      degreesToTurn = (maxMeasurementPosition - 130) / 3.7 ;
+  {
+    ticsToTurn = (maxMeasurementPosition - 130) / 7 ;
+  }
       
   if (side == 'r')
-      degreesToTurn = (130 - maxMeasurementPosition) / 3.7 ;
-
-  leftEncoderValue = 0;
-  rightEncoderValue = 0;
+  {
+    ticsToTurn = (130 - maxMeasurementPosition) / 5 ;
+  }
   
   
   while (getMeasurement() < 15)
@@ -197,13 +267,13 @@ void turnToFarestObject()
   }
   stop();
   
-  while (side == 'l' && rightEncoderValue < degreesToTurn)
+  while (side == 'l' && rightEncoderValue < ticsToTurn)
   {
     turnLeft(100);
   }
   stop();
 
-  while (side == 'r' && leftEncoderValue < degreesToTurn)
+  while (side == 'r' && leftEncoderValue < ticsToTurn)
   {
     turnRight(100);
   }
@@ -236,6 +306,8 @@ void rightEncoder()
 void loop()
 {
   scan();
+  checkForTrap();
+  checkForLane();
   moveToFarestObject();
 }
 /*---------------------------------------------------------------------------------------------------------------*/
