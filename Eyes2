@@ -1,0 +1,430 @@
+#include <SoftwareSerial.h>
+#include <URMSerial.h>
+
+/*------Пины двигателей------*/
+int E1 = 5;
+int E2 = 6;
+int M1 = 4;
+int M2 = 7;
+/*--------------------------*/
+
+/*-----------SERVO----------*/
+int servo = 13;
+int left = 200;
+int center = 130;
+int right = 75;
+int pos = center;
+int maxMeasurementPosition = 0;
+char side = '0';
+int ticsToTurn = 0;
+/*--------------------------*/
+
+/*----------MEASUREMENT---------*/
+int leftMeasurement = 100;
+int rightMeasurement = 100;
+int errorProceeding = 0; // 0 - вне поля зрения, 1 - отражающая поверхность
+/*------------------------------*/
+
+/*---------ENCODERS---------*/
+int rightEncoderValue = 0;
+int leftEncoderValue = 0;
+/*--------------------------*/
+
+/*------------------------------------URM code--------------------------------------------*/
+URMSerial urm;
+
+int maxMeasurement = 0;
+int value; // This value will be populated
+int getMeasurement()
+{
+  // Request a distance reading from the URM37
+  switch(urm.requestMeasurementOrTimeout(DISTANCE, value)) // Find out the type of request
+  {
+  case DISTANCE: // Double check the reading we recieve is of DISTANCE type
+    //    Serial.println(value); // Fetch the distance in centimeters from the URM37
+    return value;
+    break;
+  case TEMPERATURE:
+    return value;
+    break;
+  case ERROR:
+    Serial.println("Error");
+    if (errorProceeding == 0)
+      return(1000);
+    if (errorProceeding == 1)
+      return(0);
+    break;
+  case NOTREADY:
+    Serial.println("Not Ready");
+    break;
+  case TIMEOUT:
+    Serial.println("Timeout");
+    break;
+  } 
+  
+  Serial.println("Wawe lost");
+    if (errorProceeding == 0)
+      return(1000);
+    if (errorProceeding == 1)
+      return(0);
+}
+/*----------------------------------------------------------------------------------------*/
+
+
+/*-----------------------------------------------------SETUP-----------------------------------------------------*/
+void setup() 
+{
+  Serial.begin(9600);                  // Sets the baud rate to 9600
+  urm.begin(8,9,9600);                 // RX Pin, TX Pin, Baud Rate
+  Serial.println("URM37 Library by Miles Burton - Distance. Version 2.0");   // Shameless plug 
+  
+  analogWrite(servo, center);
+  delay(500);
+  
+  attachInterrupt (0, leftEncoder, CHANGE);
+  attachInterrupt (1, rightEncoder, CHANGE);
+}
+/*---------------------------------------------------------------------------------------------------------------*/
+
+
+/*---------------------------------------------------FUNCTIONS---------------------------------------------------*/
+void clearEncValues()
+{
+  leftEncoderValue = 0;
+  rightEncoderValue = 0;
+}
+
+void moveForward(int E1speed, int E2speed)
+{
+  analogWrite (E1, E1speed);
+  digitalWrite (M1, HIGH);
+  analogWrite (E2, E2speed);
+  digitalWrite (M2, HIGH);
+}
+
+void moveBack(int E1speed, int E2speed)
+{
+  analogWrite (E1, E1speed);
+  digitalWrite (M1, LOW);
+  analogWrite (E2, E2speed);
+  digitalWrite (M2, LOW);
+}
+
+void turnLeft(int E2speed)
+{
+  analogWrite (E2, E2speed);
+  digitalWrite (M2, HIGH);
+  
+  analogWrite (E1, 0);
+  digitalWrite (M2, HIGH);
+}
+
+void turnLeft2(int E1speed)
+{
+  analogWrite (E1, E1speed);
+  digitalWrite (M1, LOW);
+  
+  analogWrite (E2, 0);
+  digitalWrite (M2, HIGH);
+}
+
+void turnRight(int E1speed)
+{
+  analogWrite (E1, E1speed);
+  digitalWrite (M1, HIGH);
+  
+  analogWrite (E2, 0);
+  digitalWrite (M1, HIGH);
+}
+
+void turnRight2(int E2speed)
+{
+  analogWrite (E1, 0);
+  digitalWrite (M1, HIGH);
+  
+  analogWrite (E2, E2speed);
+  digitalWrite (M2, LOW);
+}
+
+void turnBack(int E1speed, int E2speed)
+{
+  clearEncValues();
+  while (rightEncoderValue < 20)
+  {
+    analogWrite (E2, E2speed);
+    digitalWrite (M2, HIGH);
+    
+    analogWrite (E1, E1speed);
+    digitalWrite (M1, LOW);
+  }
+        
+
+}
+
+void stop()
+{
+  analogWrite (E1, 0);
+  analogWrite (E2, 0);
+}
+
+void moveToObject()
+{
+  while (getMeasurement() >= 20 || getMeasurement() == ERROR)
+  {
+    moveForward(150, 150);
+  } 
+  stop();
+
+  while (getMeasurement() < 15)
+  {
+    moveBack(100, 100);
+  }
+  stop();
+}
+
+void moveToObject2(int E1speed, int E2speed)
+{
+  if (getMeasurement() >= 20)
+      moveForward(E1speed, E2speed);
+
+  if (getMeasurement() <= 15)
+  {
+    stop();
+    errorProceeding = 1;
+    scan();
+    errorProceeding = 0;
+    checkForTrap();
+    turnToFarestObject();
+  }
+      
+}
+
+void escapeLeftObject(int E1speed, int E2speed)
+{
+
+  if (getMeasurement() <= 20)
+  {
+    while (getMeasurement() <= 35)
+    {
+      if (getMeasurement() <= 10)
+      {
+        while (getMeasurement() <= 35)
+           turnRight2(E2speed);
+      }
+      turnRight(E1speed);
+    }
+    moveForward (80, 100);
+    delay(100);
+  }
+}
+
+void escapeRightObject(int E2speed, int E1speed)
+{
+  if (getMeasurement() <= 20)
+  {
+    while (getMeasurement() <= 35)
+    {
+      if (getMeasurement() <= 10)
+      {
+        while (getMeasurement() <= 35)
+           turnLeft2(E2speed);
+      }
+        turnLeft(E1speed);
+    }
+    moveForward (80, 100);
+    delay(100);
+  }
+  if (getMeasurement() <= 30)
+  {
+    while (getMeasurement() <= 35)
+        turnLeft(E2speed);
+    moveForward (100, 80);
+    delay(100);
+  }
+}
+
+void scanLeft()
+{
+   for(; pos < left ; pos +=5) 
+   { 
+     analogWrite(servo, pos);           
+     delay(30);  
+     Serial.println(getMeasurement());
+     
+     if (getMeasurement() > maxMeasurement)
+     {
+       maxMeasurement = getMeasurement();
+       maxMeasurementPosition = pos;
+       
+       if (pos < 140)
+         side = 'r';  
+     }  
+   }
+  leftMeasurement = getMeasurement(); 
+}
+
+void scanRight()
+{
+   for(; pos > right; pos -=5) 
+   { 
+     analogWrite(servo, pos);           
+     delay(30);  
+     Serial.println(getMeasurement());
+     
+     if (getMeasurement() > maxMeasurement)
+     {
+       maxMeasurement = getMeasurement();
+       maxMeasurementPosition = pos;
+       
+       if (pos > center)
+         side = 'l';  
+     }  
+   }
+  rightMeasurement = getMeasurement(); 
+}
+
+void scan()
+{
+  maxMeasurement = getMeasurement();
+  maxMeasurementPosition = center;
+  side = '0';
+  
+  scanLeft();
+  scanRight();
+}
+
+void turnServoLeft()
+{
+  analogWrite(servo, left);  
+  delay(200);
+}
+
+void turnServoRight()
+{
+  analogWrite(servo, right);
+  delay(200);
+}
+
+void scanWithMove(int E1speed, int E2speed)
+{
+  centerServo();
+  moveToObject2(E1speed, E2speed);
+  
+  turnServoLeft();
+  escapeLeftObject(E1speed, E2speed);
+  
+  centerServo();
+  moveToObject2(E1speed, E2speed);
+  
+  turnServoRight();
+  escapeRightObject(E2speed, E1speed);
+   
+}
+
+void checkForTrap()
+{
+  clearEncValues();
+  if (maxMeasurement <= 20 && leftMeasurement <= 20 && rightMeasurement <= 20)
+  {
+    while (leftEncoderValue < 25 || rightEncoderValue < 25)
+        moveBack(100, 100);
+    stop();
+    
+    turnBack(100, 100);
+    stop();
+    
+  leftMeasurement = 200;
+  rightMeasurement = 200;
+  }
+
+}
+
+void checkForLane()
+{
+  clearEncValues();
+  if (leftMeasurement <= 10)
+  {
+    while (rightEncoderValue < 15)
+        moveBack(85, 150);
+    stop();
+    
+    leftMeasurement = 200;
+  }
+  if (rightMeasurement <= 10)
+  {
+    while (leftEncoderValue < 15)
+        moveBack(150, 85);
+    stop();
+    rightMeasurement = 200;
+  }
+}
+
+void centerServo()
+{
+  analogWrite(servo, 140);    
+  delay(500);
+}
+
+void turnToFarestObject()
+{ 
+  centerServo();
+  clearEncValues();
+  
+  if (side == 'l')
+  {
+    ticsToTurn = (maxMeasurementPosition - 130) / 7 ;
+  }
+      
+  if (side == 'r')
+  {
+    ticsToTurn = (130 - maxMeasurementPosition) / 5 ;
+  }
+  
+  
+  while (getMeasurement() < 15)
+  {
+    moveBack(80, 80);
+  }
+  stop();
+  
+  while (side == 'l' && rightEncoderValue < ticsToTurn)
+  {
+    turnLeft(80);
+  }
+  stop();
+
+  while (side == 'r' && leftEncoderValue < ticsToTurn)
+  {
+    turnRight(80);
+  }
+  stop();
+}
+
+void moveToFarestObject()
+{  
+  turnToFarestObject();
+  moveToObject();
+}
+
+
+
+void leftEncoder()
+{
+  leftEncoderValue++;
+}
+
+void rightEncoder()
+{
+  rightEncoderValue++;
+}
+/*---------------------------------------------------------------------------------------------------------------*/
+
+
+
+
+/*--------------------------------------------------MAIN CYCLE---------------------------------------------------*/
+void loop()
+{
+  scanWithMove(80, 80);
+}
+/*---------------------------------------------------------------------------------------------------------------*/
