@@ -1,0 +1,39 @@
+#include <SoftwareSerial.h>
+#include <URMSerial.h>
+
+/*------Пины двигателей------*/
+int E1 = 5;
+int E2 = 6;
+int M1 = 4;
+int M2 = 7;
+/*--------------------------*/
+
+void setup()
+{
+  
+}
+
+class Robot
+{
+  public:
+    void moveForward(int E1speed, int E2speed)
+    {
+      analogWrite (E1, E1speed);
+      digitalWrite (M1, HIGH);
+      analogWrite (E2, E2speed);
+      digitalWrite (M2, HIGH);
+    }
+
+    void moveBack(int E1speed, int E2speed)
+    {
+      analogWrite (E1, E1speed);
+      digitalWrite (M1, LOW);
+      analogWrite (E2, E2speed);
+      digitalWrite (M2, LOW);
+    }
+};
+
+void loop()
+{
+  Robot robot_1 moveForward(100,100);
+}
