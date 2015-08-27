@@ -1,0 +1,147 @@
+#define line 0
+
+/*------Пины двигателей------*/
+int E1 = 5;
+int E2 = 6;
+int M1 = 4;
+int M2 = 7;
+/*--------------------------*/
+
+
+int leftLineSensor = 0;
+int middleLineSensor = 0;
+int rightLineSensor = 0;
+
+int leftWaySensor = 0;
+int frontWaySensor = 0;
+int rightWaySensor = 0;
+
+
+char leftWay[100];
+char rightWay[100];
+char frontWay[100];
+
+int size = 0;
+
+
+
+void moveForward(float LEspeed, float REspeed)
+{
+  analogWrite (E1, LEspeed);
+  digitalWrite (M1, HIGH);
+  analogWrite (E2, REspeed);
+  digitalWrite (M2, HIGH);
+}
+
+void moveBackward(float LEspeed, float REspeed)
+{
+  analogWrite (E1, LEspeed);
+  digitalWrite (M1, LOW);
+  analogWrite (E2, REspeed);
+  digitalWrite (M2, LOW);
+}
+
+void turnLeft (float LEspeed, float REspeed)
+{
+  analogWrite (E1, LEspeed);
+  digitalWrite (M1, LOW);
+  analogWrite (E2, REspeed);
+  digitalWrite (M2, HIGH);
+}
+
+void turnRight (float LEspeed, float REspeed)
+{
+  analogWrite (E1, LEspeed);
+  digitalWrite (M1, HIGH);
+  analogWrite (E2, REspeed);
+  digitalWrite (M2, LOW);
+}
+
+void stop()
+{
+  digitalWrite(E1, LOW);
+  digitalWrite(E2, LOW);
+}
+
+
+
+void setup() 
+{
+  Serial.begin(9600);
+}
+
+void loop() 
+{
+  /*
+  leftLineSensor = analogRead(A4);
+  middleLineSensor = analogRead(A3);
+  rightLineSensor = analogRead(A2);
+  
+  leftWaySensor = analogRead(A5);
+  frontWaySensor = digitalRead(10);
+  rightWaySensor = analogRead(A1);
+  */
+  
+  //Serial.println(analogRead(A5));
+
+  while (analogRead(A3) > 60 && analogRead(3) > 60 && analogRead(A4) > 180 && analogRead(A2) > 150)
+      stop();
+  
+  while (analogRead(A3) < 60 || analogRead(3) < 60)
+  {
+       //Serial.println(analogRead(3));
+       moveForward(125, 95);
+       
+       if (analogRead(A5) < 300)
+           break;
+       if (analogRead(A1) < 55)
+           break;
+  }
+     
+  if (analogRead(A4) < 180)
+  {
+      //Serial.println(analogRead(A4));
+      turnLeft(0, 200);  
+  }
+      
+  if (analogRead(A2) < 150)
+  {
+      //Serial.println(analogRead(A2));
+      turnRight(180, 0);
+  }
+      
+  if (analogRead(A1) < 55 || analogRead(A5) < 300)
+  {
+    size++;
+    digitalWrite(13, HIGH);
+    
+    if (digitalRead(10) == 0)
+    {
+      Serial.println('F');
+      while (digitalRead(10) == 0)
+          moveForward(160, 130);
+      delay(200);
+    }
+    
+    
+    if (analogRead(A5) < 300)
+    {
+      Serial.println('L');
+      while (analogRead(A5) < 300)
+          turnLeft(0, 170);
+      while (analogRead(3) > 60)
+          turnLeft(0, 170);
+      delay(100);
+    }
+    
+    //if (analogRead(A1) < 55)
+    //{
+     // Serial.println('R');
+     // while (analogRead(A2) > 150)
+       //   turnRight(130, 0);
+    //}
+    
+    digitalWrite(13, LOW);
+  }
+
+}
