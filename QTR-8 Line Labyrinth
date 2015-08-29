@@ -1,4 +1,10 @@
 #define line 0
+#define line_RW 200
+#define line_LW 200
+#define line_RL 50
+#define line_ML 50
+#define line_MR 40
+#define line_LL 50
 
 /*------Пины двигателей------*/
 int E1 = 5;
@@ -25,7 +31,7 @@ int size = 0;
 
 char direction = 'F';
 
-int extraSpeed = 35; // 0...100
+int extraSpeed = 40; // 0...100
 
 long previousMillis = 0; //for timer
 long interval = 500;
@@ -64,7 +70,7 @@ void turnRight (float LEspeed, float REspeed)
 
 void turnBack(float LEspeed, float REspeed)
 {
-  while (analogRead(3) > 60)
+  while (analogRead(3) > line_ML)
        turnLeft(LEspeed, REspeed);
 }
 
@@ -83,43 +89,43 @@ char getLastWay()
 
 void tryToCalibrate()
 {
-  if (analogRead(A5) < 200)
+  if (analogRead(A5) < line_LW)
   {
-      while (analogRead(A4) > 50)
+      while (analogRead(A4) > line_LL)
           turnLeft(0, 130 + extraSpeed);
       delay(100);
   }
   
-  if (analogRead(A4) < 50)
+  if (analogRead(A4) < line_LL)
   {
-      while (analogRead(3) > 50)
+      while (analogRead(3) > line_ML)
           turnLeft(0, 130 + extraSpeed);
       delay(100);
   }
   
   
-  if (analogRead(A1) < 200)
+  if (analogRead(A1) < line_RW)
   {
-      while (analogRead(A2) > 50)
+      while (analogRead(A2) > line_RL)
           turnRight(130 + extraSpeed, 0);
       delay(100);
   }
-  if (analogRead(A2) < 50)
+  if (analogRead(A2) < line_RL)
   {
-      while (analogRead(A3) > 40)
+      while (analogRead(A3) > line_MR)
           turnRight(130 + extraSpeed, 0);
       delay(100);
   }
           
-  if (analogRead(A3) > 40 && analogRead(3) > 50 && analogRead(A4) > 50 && analogRead(A2) > 50 && digitalRead(10) != 0)
+  if (analogRead(A3) > line_MR && analogRead(3) > line_ML && analogRead(A4) > line_LL && analogRead(A2) > line_RL && digitalRead(10) != 0)
   {
     stop();
     delay(200);
     if (getLastWay() == 'L')
-        while (digitalRead(10) != 0)
+        while (digitalRead(10) != line)
             turnLeft(0, 130 + extraSpeed);
     if (getLastWay() == 'R')
-        while (digitalRead(10) != 0)
+        while (digitalRead(10) != line)
             turnRight(130 + extraSpeed, 0);
   }
 }
@@ -152,16 +158,15 @@ void loop()
   */
   
   //Serial.println(analogRead(A4));
-  //A1 < 300
+  //A1 < 200
   //A2 < 50
   // 3 < 50
   //A3 < 40
   //A4 < 50
-  //A5 < 300
-  
+  //A5 < 200
   
 
-  if (analogRead(A3) > 40 && analogRead(3) > 50 && analogRead(A4) > 50 && analogRead(A2) > 50 && analogRead(A1) > 200 && analogRead(A5) > 300)
+  if (analogRead(A3) > line_MR && analogRead(3) > line_ML && analogRead(A4) > line_LL && analogRead(A2) > line_RL && analogRead(A1) > line_RW && analogRead(A5) > line_LW)
   {
     if (digitalRead(10) == 0)
         moveForward(130 + extraSpeed, 130 + extraSpeed);
@@ -171,12 +176,11 @@ void loop()
           stop();      // I don't want to fail here
           delay(2000); // Check!
           
-          tryToCalibrate();
           moveForward(130 + extraSpeed, 130 + extraSpeed); // Insurance
           delay(400);
           tryToCalibrate();
           
-          if (digitalRead(2) == 0) // Is it real finnish? You're are not kidding?
+          if (digitalRead(2) == 0) // Is it real finnish? You're not kidding?
             {
               Serial.println("FINISH!"); //Oh, ok.
               direction = 'B';
@@ -187,35 +191,35 @@ void loop()
         }
   }
   
-  if (analogRead(A4) < 50)
+  if (analogRead(A4) < line_LL)
   {
       turnLeft(0, 130 + extraSpeed);
       delay(10);
   }
-  if (analogRead(3) < 50)
+  if (analogRead(3) < line_ML)
   {
       moveForward(80 + extraSpeed, 130 + extraSpeed);
       delay(10);
   }
-  if (analogRead(A3) < 40)
+  if (analogRead(A3) < line_MR)
   {
       moveForward(130 + extraSpeed, 80 + extraSpeed);
       delay(10);
   }
-  if (analogRead(A2) < 50)
+  if (analogRead(A2) < line_RL)
   {
       turnRight(130 + extraSpeed, 0);
       delay(10);
   }
       
     
-  if (analogRead(A1) < 200 || analogRead(A5) < 200)
+  if (analogRead(A1) < line_RW || analogRead(A5) < line_LW)
   {
     if (millis() - previousMillis > interval)
     {
       stop();
       delay(400);
-      while(analogRead(A1) > 200 && analogRead(A5) > 200) // проверка на "проскок"
+      while(analogRead(A1) > line_RW && analogRead(A5) > line_LW) // проверка на "проскок"
           moveBackward(70 + extraSpeed, 70 + extraSpeed);
       stop();
     
@@ -233,25 +237,25 @@ void loop()
         delay(400);
       }
     
-      if (analogRead(A5) < 200 && getLastWay() == 'N')
+      if (analogRead(A5) < line_LW && getLastWay() == 'N')
       {
         Serial.println('L');
         leftWay[size] = 'C';
       
-        while (analogRead(A5) < 200)
+        while (analogRead(A5) < line_LW)
             turnLeft(0, 130 + extraSpeed);
-        while (analogRead(3) > 50)
+        while (analogRead(3) > line_ML)
             turnLeft(0, 130 + extraSpeed);
       }
       
-      if (analogRead(A1) < 200 && getLastWay() == 'N')
+      if (analogRead(A1) < line_RW && getLastWay() == 'N')
       {
         Serial.println('R');
         rightWay[size] = 'C';
       
-        while (analogRead(A1) < 200)
+        while (analogRead(A1) < line_RW)
             turnRight(130 + extraSpeed, 0);
-        while (analogRead(A3) > 40)
+        while (analogRead(A3) > line_MR)
             turnRight(130+extraSpeed, 0);
       }
     
