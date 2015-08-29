@@ -23,8 +23,9 @@ char frontWay[100];
 
 int size = 0;
 
+char direction = 'F';
 
-int extraSpeed = 30; // 0...100
+int extraSpeed = 35; // 0...100
 
 long previousMillis = 0; //for timer
 long interval = 500;
@@ -80,9 +81,9 @@ char getLastWay()
       return 'N';
 }
 
-void calibrate()
+void tryToCalibrate()
 {
-  if (analogRead(A5) < 300)
+  if (analogRead(A5) < 200)
   {
       while (analogRead(A4) > 50)
           turnLeft(0, 130 + extraSpeed);
@@ -97,7 +98,7 @@ void calibrate()
   }
   
   
-  if (analogRead(A1) < 300)
+  if (analogRead(A1) < 200)
   {
       while (analogRead(A2) > 50)
           turnRight(130 + extraSpeed, 0);
@@ -113,7 +114,7 @@ void calibrate()
   if (analogRead(A3) > 40 && analogRead(3) > 50 && analogRead(A4) > 50 && analogRead(A2) > 50 && digitalRead(10) != 0)
   {
     stop();
-    delay(2000);
+    delay(200);
     if (getLastWay() == 'L')
         while (digitalRead(10) != 0)
             turnLeft(0, 130 + extraSpeed);
@@ -134,6 +135,7 @@ void stop()
 void setup() 
 {
   Serial.begin(9600);
+  tryToCalibrate();
 }
 
 void loop() 
@@ -149,7 +151,7 @@ void loop()
   rightWaySensor = analogRead(A1);
   */
   
-  //Serial.println(analogRead(A2));
+  //Serial.println(analogRead(A4));
   //A1 < 300
   //A2 < 50
   // 3 < 50
@@ -158,13 +160,31 @@ void loop()
   //A5 < 300
   
   
-  
-  if (analogRead(A3) > 40 && analogRead(3) > 50 && analogRead(A4) > 50 && analogRead(A2) > 50)
+
+  if (analogRead(A3) > 40 && analogRead(3) > 50 && analogRead(A4) > 50 && analogRead(A2) > 50 && analogRead(A1) > 200 && analogRead(A5) > 300)
   {
     if (digitalRead(10) == 0)
         moveForward(130 + extraSpeed, 130 + extraSpeed);
     else
-        stop();
+        if (digitalRead(2) == 0)
+        { 
+          stop();      // I don't want to fail here
+          delay(2000); // Check!
+          
+          tryToCalibrate();
+          moveForward(130 + extraSpeed, 130 + extraSpeed); // Insurance
+          delay(400);
+          tryToCalibrate();
+          
+          if (digitalRead(2) == 0) // Is it real finnish? You're are not kidding?
+            {
+              Serial.println("FINISH!"); //Oh, ok.
+              direction = 'B';
+              
+              while(1)
+                  stop();
+            }
+        }
   }
   
   if (analogRead(A4) < 50)
@@ -189,13 +209,13 @@ void loop()
   }
       
     
-  if (analogRead(A1) < 300 || analogRead(A5) < 300)
+  if (analogRead(A1) < 200 || analogRead(A5) < 200)
   {
     if (millis() - previousMillis > interval)
     {
       stop();
       delay(400);
-      while(analogRead(A1) > 300 && analogRead(A5) > 300) // проверка на "проскок"
+      while(analogRead(A1) > 200 && analogRead(A5) > 200) // проверка на "проскок"
           moveBackward(70 + extraSpeed, 70 + extraSpeed);
       stop();
     
@@ -213,36 +233,35 @@ void loop()
         delay(400);
       }
     
-      if (analogRead(A5) < 300 && getLastWay() == 'N')
+      if (analogRead(A5) < 200 && getLastWay() == 'N')
       {
         Serial.println('L');
         leftWay[size] = 'C';
       
-        while (analogRead(A5) < 300)
+        while (analogRead(A5) < 200)
             turnLeft(0, 130 + extraSpeed);
         while (analogRead(3) > 50)
             turnLeft(0, 130 + extraSpeed);
-        delay(200);
       }
       
-      if (analogRead(A1) < 300 && getLastWay() == 'N')
+      if (analogRead(A1) < 200 && getLastWay() == 'N')
       {
         Serial.println('R');
         rightWay[size] = 'C';
       
-        while (analogRead(A1) < 300)
+        while (analogRead(A1) < 200)
             turnRight(130 + extraSpeed, 0);
         while (analogRead(A3) > 40)
             turnRight(130+extraSpeed, 0);
-        delay(200);
       }
     
       digitalWrite(13, LOW);
     
-      calibrate();
+      tryToCalibrate();
     }
+    else
+        tryToCalibrate();
     
     previousMillis = millis();
  }
- 
 }
