@@ -1,10 +1,10 @@
 #define line 0
-#define line_RW 200
-#define line_LW 200
-#define line_RL 50
-#define line_ML 50
-#define line_MR 40
-#define line_LL 50
+#define rightFarSensor 550
+#define rightNearSensor 50
+#define rightMiddleSensor 40
+#define leftMiddleSensor 50
+#define leftNearSensor 50
+#define leftFarSensor 300
 
 /*------Пины двигателей------*/
 int E1 = 5;
@@ -26,15 +26,21 @@ int rightWaySensor = 0;
 char leftWay[100];
 char rightWay[100];
 char frontWay[100];
+char lastWay[100];
 
 int size = 0;
 
 char direction = 'F';
 
-int extraSpeed = 40; // 0...100
+int extraSpeed = 30; // 0...100
 
 long previousMillis = 0; //for timer
-long interval = 500;
+long previousMillis1 = 0; //extra
+long previousMillis2 = 0;
+long interval = 300;
+
+int error = 0;
+int skip = 0;
 
 void moveForward(float LEspeed, float REspeed)
 {
@@ -70,11 +76,67 @@ void turnRight (float LEspeed, float REspeed)
 
 void turnBack(float LEspeed, float REspeed)
 {
-  while (analogRead(3) > line_ML)
+  while (analogRead(3) >= leftMiddleSensor)
        turnLeft(LEspeed, REspeed);
 }
 
-char getLastWay()
+void followLine()
+{
+  if (analogRead(A4) <= leftNearSensor)
+  {
+      turnLeft(0, 130 + extraSpeed);
+      delay(10);
+  }
+  if (analogRead(3) <= leftMiddleSensor)
+  {
+      moveForward(80 + extraSpeed, 130 + extraSpeed);
+      delay(10);
+  }
+  if (analogRead(A3) <= rightMiddleSensor)
+  {
+      moveForward(130 + extraSpeed, 80 + extraSpeed);
+      delay(10);
+  }
+  if (analogRead(A2) <= rightNearSensor)
+  {
+      turnRight(130 + extraSpeed, 0);
+      delay(10);
+  }
+}
+
+void chooseFrontWay()
+{
+  Serial.println('F');
+  // вручную
+      
+  if (digitalRead(10) == line)
+      moveForward(130 + extraSpeed, 130 + extraSpeed);
+  delay(400);
+}
+
+void chooseLeftWay()
+{
+  Serial.println('L');
+  //leftWay[size] = 'C'; вручную это надо писать
+      
+  while (analogRead(A5) <= leftFarSensor)
+      turnLeft(0, 130 + extraSpeed);
+  while (analogRead(3) >= leftMiddleSensor)
+      turnLeft(0, 130 + extraSpeed);
+}
+
+void chooseRightWay()
+{
+  Serial.println('R');
+  //rightWay[size] = 'C'; вручную
+      
+  while (analogRead(A1) <= rightFarSensor)
+      turnRight(130 + extraSpeed, 0);
+  while (analogRead(A3) >= rightMiddleSensor)
+      turnRight(130 + extraSpeed, 0);
+}
+
+char getSizeNumWay()
 {
   if (frontWay[size] == 'C')
       return 'F';
@@ -87,46 +149,292 @@ char getLastWay()
       return 'N';
 }
 
+void assignSizeNumWayAsDead()
+{ 
+  if (frontWay[size] == 'C')
+  {
+    if (leftWay[size] == 'D' && rightWay[size] == 'D')
+        lastWay[size] = 'F';
+        
+    frontWay[size] = 'D';
+  }
+  if (leftWay[size] == 'C')
+  {
+    if (frontWay[size] == 'D' && rightWay[size] == 'D')
+        lastWay[size] = 'L';
+    
+    leftWay[size] = 'D';
+  }
+  if (rightWay[size] == 'C')
+  {
+    if (frontWay[size] == 'D' && leftWay[size] == 'D')
+        lastWay[size] = 'R';
+    
+    rightWay[size] = 'D';
+  }
+}
+
+void tryToFinishMove()
+{
+  if (analogRead(A3) >= rightMiddleSensor && analogRead(3) >= leftMiddleSensor && analogRead(A4) >= leftNearSensor && analogRead(A2) >= rightNearSensor && digitalRead(10) != line)
+    {
+      stop();
+      delay(200);
+      if (getSizeNumWay() == 'L')
+          while (digitalRead(10) != line)
+              turnLeft(0, 130 + extraSpeed);
+      if (getSizeNumWay() == 'R')
+          while (digitalRead(10) != line)
+              turnRight(130 + extraSpeed, 0);
+    }
+}
+
 void tryToCalibrate()
 {
-  if (analogRead(A5) < line_LW)
+  while (analogRead(3) <= leftMiddleSensor && analogRead(A3) <= rightMiddleSensor)
   {
-      while (analogRead(A4) > line_LL)
-          turnLeft(0, 130 + extraSpeed);
-      delay(100);
-  }
+    if (analogRead(A5) <= leftFarSensor)
+    {
+        while (analogRead(A4) >= leftNearSensor)
+            turnLeft(0, 130 + extraSpeed);
+        delay(100);
+    }
   
-  if (analogRead(A4) < line_LL)
-  {
-      while (analogRead(3) > line_ML)
-          turnLeft(0, 130 + extraSpeed);
-      delay(100);
-  }
+    if (analogRead(A4) <= leftNearSensor)
+    {
+        while (analogRead(3) >= leftMiddleSensor)
+            turnLeft(0, 130 + extraSpeed);
+        delay(100);
+    }
   
   
-  if (analogRead(A1) < line_RW)
-  {
-      while (analogRead(A2) > line_RL)
-          turnRight(130 + extraSpeed, 0);
-      delay(100);
+    if (analogRead(A1) <= rightFarSensor)
+    {
+        while (analogRead(A2) >= rightNearSensor)
+            turnRight(130 + extraSpeed, 0);
+        delay(100);
+    }
+    if (analogRead(A2) <= rightNearSensor)
+    {
+        while (analogRead(A3) >= rightMiddleSensor)
+            turnRight(130 + extraSpeed, 0);
+        delay(100);
+    }
   }
-  if (analogRead(A2) < line_RL)
+}
+
+void checkForFinish()
+{
+  if (analogRead(A3) > rightMiddleSensor && analogRead(3) > leftMiddleSensor && analogRead(A4) > leftNearSensor && analogRead(A2) > rightNearSensor && analogRead(A1) > rightFarSensor && analogRead(A5) > leftFarSensor)
   {
-      while (analogRead(A3) > line_MR)
-          turnRight(130 + extraSpeed, 0);
-      delay(100);
-  }
+    if (digitalRead(10) == line)
+        moveForward(130 + extraSpeed, 130 + extraSpeed);
+    else
+        if (digitalRead(2) == line)
+        { 
+          moveForward(130 + extraSpeed, 130 + extraSpeed); // Insurance
+          delay(200);
           
-  if (analogRead(A3) > line_MR && analogRead(3) > line_ML && analogRead(A4) > line_LL && analogRead(A2) > line_RL && digitalRead(10) != 0)
+          if (digitalRead(2) == line) // Is it real finnish? You're not kidding?
+            {
+              Serial.println("FINISH!"); //Oh, ok.
+              
+              while(1)
+                  stop();
+            }
+          else
+          {
+              tryToCalibrate();
+              tryToFinishMove();
+          }
+        }
+  }
+}
+
+void checkForCrosswaySkipping()
+{
+  previousMillis1 = millis();
+  while(analogRead(A1) >= rightFarSensor && analogRead(A5) >= leftFarSensor) // проверка на "проскок"
+    {
+      moveBackward(70 + extraSpeed, 70 + extraSpeed);
+          
+      if (millis() - previousMillis1 > 1000)
+      {
+        stop;
+        tryToCalibrate();
+            
+        error = 1;
+        break;
+      }
+    }
+  stop();
+}
+
+void markDeadways()
+{
+  if (digitalRead(10) != line)
+      frontWay[size] = 'D';
+  if (analogRead(A5) > leftFarSensor)
+      leftWay[size] = 'D';
+  if (analogRead(A1) > rightFarSensor)
+      rightWay[size] = 'D';
+}
+
+void checkForCrossway()
+{
+  if (analogRead(A1) <= rightFarSensor || analogRead(A5) <= leftFarSensor && error == 0)
   {
+    if (millis() - previousMillis >= interval)
+    {
+      stop();
+      delay(400);
+      checkForCrosswaySkipping();      
+      
+      digitalWrite(13, HIGH);
+      
+      if (direction == 'F')
+      {
+        size++;
+        markDeadways();
+    
+      
+        if (digitalRead(10) == line)
+        {
+          chooseFrontWay();
+          frontWay[size] = 'C';
+        }
+    
+        if (analogRead(A5) <= leftFarSensor && getSizeNumWay() == 'N')
+        {
+          chooseLeftWay();
+          leftWay[size] = 'C';
+        }
+      
+        if (analogRead(A1) <= rightFarSensor && getSizeNumWay() == 'N')
+        {
+          chooseRightWay();
+          rightWay[size] = 'C';
+        }
+      }
+      
+      if (direction == 'B')
+      {
+        if (frontWay[size] == 'D' && leftWay[size] == 'D' && rightWay[size] == 'D')
+        {
+          if (lastWay[size] == 'F')
+              chooseFrontWay();
+          if (lastWay[size] == 'R')
+              chooseLeftWay();
+          if (lastWay[size] == 'L')
+              chooseRightWay();
+          
+          size--;
+          assignSizeNumWayAsDead();
+          
+          skip = 1;
+        }
+        
+        if (skip == 0)
+        {
+          if (getSizeNumWay() == 'F' && direction == 'B')
+          {
+            if (rightWay[size] != 'D' && direction == 'B')
+            {
+              size++;
+              chooseLeftWay();
+              rightWay[size] = 'C';
+              direction = 'F';
+            }
+            
+            if (leftWay[size] != 'D' && direction == 'B')
+            {
+              size++;
+              chooseRightWay();
+              leftWay[size] = 'C';
+              direction = 'F';
+            }
+            
+          }
+          
+          if (getSizeNumWay() == 'L' && direction == 'B')
+          {
+            if (frontWay[size] != 'D' && direction == 'B')
+            {
+              size++;
+              chooseLeftWay();
+              frontWay[size] = 'C';
+              direction = 'F';
+            }
+            
+            if (rightWay[size] != 'D' && direction == 'B')
+            {
+              size++;
+              chooseFrontWay();
+              rightWay[size] = 'C';
+              direction = 'F';
+            }
+            
+          }
+          
+          if (getSizeNumWay() == 'R' && direction == 'B')
+          {
+            if (frontWay[size] != 'D' && direction == 'B')
+            {
+              size++;
+              chooseRightWay();
+              frontWay[size] = 'C';
+              direction = 'F';
+            }
+            
+            if (leftWay[size] != 'D' && direction == 'B')
+            {
+              size++;
+              chooseFrontWay();
+              leftWay[size] = 'C';
+              direction = 'F';
+            }
+          }
+            
+        }
+        skip = 0;
+        
+      }
+      
+    
+      digitalWrite(13, LOW);
+    
+      tryToCalibrate();
+    }
+    else
+    {
+        tryToCalibrate();
+        tryToFinishMove();
+    }
+    
+    previousMillis = millis();
+    error = 0;
+ }
+}
+
+void checkForDeadEnd()
+{
+  if (analogRead(A3) > rightMiddleSensor && analogRead(3) > leftMiddleSensor && analogRead(A4) > leftNearSensor && analogRead(A2) > rightNearSensor && analogRead(A1) > rightFarSensor && analogRead(A5) > leftFarSensor && digitalRead(10) != line && digitalRead(2)!= line)
+  {
+    Serial.println("Line lost!");
     stop();
     delay(200);
-    if (getLastWay() == 'L')
-        while (digitalRead(10) != line)
-            turnLeft(0, 130 + extraSpeed);
-    if (getLastWay() == 'R')
-        while (digitalRead(10) != line)
-            turnRight(130 + extraSpeed, 0);
+    assignSizeNumWayAsDead();
+    
+    
+    while (analogRead(3) > leftMiddleSensor && digitalRead(10) != line)
+        turnLeft(120 + extraSpeed, 160 + extraSpeed);
+    stop();
+    delay(200);
+    tryToCalibrate();
+    stop();
+    
+    direction = 'B';
+    Serial.println("Backward direction");
   }
 }
 
@@ -157,8 +465,8 @@ void loop()
   rightWaySensor = analogRead(A1);
   */
   
-  //Serial.println(analogRead(A4));
-  //A1 < 200
+  //Serial.println(analogRead(A5));
+  //A1 < 550
   //A2 < 50
   // 3 < 50
   //A3 < 40
@@ -166,106 +474,10 @@ void loop()
   //A5 < 200
   
 
-  if (analogRead(A3) > line_MR && analogRead(3) > line_ML && analogRead(A4) > line_LL && analogRead(A2) > line_RL && analogRead(A1) > line_RW && analogRead(A5) > line_LW)
-  {
-    if (digitalRead(10) == 0)
-        moveForward(130 + extraSpeed, 130 + extraSpeed);
-    else
-        if (digitalRead(2) == 0)
-        { 
-          stop();      // I don't want to fail here
-          delay(2000); // Check!
-          
-          moveForward(130 + extraSpeed, 130 + extraSpeed); // Insurance
-          delay(400);
-          tryToCalibrate();
-          
-          if (digitalRead(2) == 0) // Is it real finnish? You're not kidding?
-            {
-              Serial.println("FINISH!"); //Oh, ok.
-              direction = 'B';
-              
-              while(1)
-                  stop();
-            }
-        }
-  }
+
   
-  if (analogRead(A4) < line_LL)
-  {
-      turnLeft(0, 130 + extraSpeed);
-      delay(10);
-  }
-  if (analogRead(3) < line_ML)
-  {
-      moveForward(80 + extraSpeed, 130 + extraSpeed);
-      delay(10);
-  }
-  if (analogRead(A3) < line_MR)
-  {
-      moveForward(130 + extraSpeed, 80 + extraSpeed);
-      delay(10);
-  }
-  if (analogRead(A2) < line_RL)
-  {
-      turnRight(130 + extraSpeed, 0);
-      delay(10);
-  }
-      
-    
-  if (analogRead(A1) < line_RW || analogRead(A5) < line_LW)
-  {
-    if (millis() - previousMillis > interval)
-    {
-      stop();
-      delay(400);
-      while(analogRead(A1) > line_RW && analogRead(A5) > line_LW) // проверка на "проскок"
-          moveBackward(70 + extraSpeed, 70 + extraSpeed);
-      stop();
-    
-      size++;
-      digitalWrite(13, HIGH);
-    
-      
-      if (digitalRead(10) == 0)
-      {
-        Serial.println('F');
-        frontWay[size] = 'C';
-      
-        if (digitalRead(10) == 0)
-            moveForward(130 + extraSpeed, 130 + extraSpeed);
-        delay(400);
-      }
-    
-      if (analogRead(A5) < line_LW && getLastWay() == 'N')
-      {
-        Serial.println('L');
-        leftWay[size] = 'C';
-      
-        while (analogRead(A5) < line_LW)
-            turnLeft(0, 130 + extraSpeed);
-        while (analogRead(3) > line_ML)
-            turnLeft(0, 130 + extraSpeed);
-      }
-      
-      if (analogRead(A1) < line_RW && getLastWay() == 'N')
-      {
-        Serial.println('R');
-        rightWay[size] = 'C';
-      
-        while (analogRead(A1) < line_RW)
-            turnRight(130 + extraSpeed, 0);
-        while (analogRead(A3) > line_MR)
-            turnRight(130+extraSpeed, 0);
-      }
-    
-      digitalWrite(13, LOW);
-    
-      tryToCalibrate();
-    }
-    else
-        tryToCalibrate();
-    
-    previousMillis = millis();
- }
+  checkForFinish();
+  followLine();
+  checkForCrossway();
+  checkForDeadEnd();
 }
